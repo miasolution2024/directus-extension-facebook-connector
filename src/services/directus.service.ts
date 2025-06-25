@@ -75,26 +75,6 @@ export async function GetintegrationSettingsData(
   }
 }
 
-export async function GetfbPagesService(
-  services: any,
-  req: any,
-  getSchema: any
-): Promise<any> {
-  try {
-    const { ItemsService } = services;
-    const schema = await getSchema();
-
-    const fbPagesService = new ItemsService("fb_pages", {
-      schema,
-      accountability: req.accountability,
-    });
-    return fbPagesService;
-  } catch (error) {
-    console.error("Error loading facebook pages:", error);
-    throw error;
-  }
-}
-
 export async function GetIntegrationLogsService(
   services: any,
   req: any,
@@ -108,6 +88,7 @@ export async function GetIntegrationLogsService(
       schema,
       accountability: req.accountability,
     });
+
     return fbPagesService;
   } catch (error) {
     console.error("Error loading integration logs:", error);

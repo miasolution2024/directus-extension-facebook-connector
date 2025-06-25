@@ -17,10 +17,14 @@ export async function handleFacebookCallback(
   getSchema: any
 ) {
   const code = req.query.code;
-  const integrationSettingsData = await GetintegrationSettingsData(services, req, getSchema);
+  const integrationSettingsData = await GetintegrationSettingsData(
+    services,
+    req,
+    getSchema
+  );
 
   if (!code) {
-    const logId = await LogIntegrationEvent(req, services, getSchema, {
+    const logId = await LogIntegrationEvent(services, req, getSchema, {
       level: "error",
       message: `No authorization code received from Facebook.`,
       context: "handleFacebookCallback",
@@ -31,7 +35,11 @@ export async function handleFacebookCallback(
       timestamp: new Date(),
     });
 
-    redirectToErrorPage(res, integrationSettingsData.public_directus_url, logId);
+    redirectToErrorPage(
+      res,
+      integrationSettingsData.public_directus_url,
+      logId
+    );
   }
 
   const { ItemsService } = services;
@@ -87,7 +95,7 @@ export async function handleFacebookCallback(
     );
     redirectToFrontend(res, integrationSettingsData.public_directus_url);
   } catch (error: any) {
-    const logId = await LogIntegrationEvent(req, services, getSchema, {
+    const logId = await LogIntegrationEvent(services, req, getSchema, {
       level: "error",
       message: `An unexpected error occurred during Facebook connection:`,
       context: "handleFacebookCallback",
@@ -99,6 +107,10 @@ export async function handleFacebookCallback(
       response_string: "",
       timestamp: new Date(),
     });
-    redirectToErrorPage(res, integrationSettingsData.public_directus_url, logId);
+    redirectToErrorPage(
+      res,
+      integrationSettingsData.public_directus_url,
+      logId
+    );
   }
 }

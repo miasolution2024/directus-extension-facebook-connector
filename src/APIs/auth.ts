@@ -22,7 +22,7 @@ export async function handleAuthRequest(
 
     res.redirect(facebookAuthUrl);
   } catch (directusError: any) {
-    const logId = await LogIntegrationEvent(req, services, getSchema, {
+    const logId = await LogIntegrationEvent(services, req,  getSchema, {
       level: "error",
       message: `Failed to load handle auth request: ${directusError.message}`,
       context: "handleAuthRequest",
