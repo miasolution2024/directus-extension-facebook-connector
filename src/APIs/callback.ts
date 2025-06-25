@@ -5,6 +5,7 @@ import {
   LogIntegrationEvent,
 } from "../services/directus.service";
 import {
+  ConfigureWebhook,
   GetGetLongLiveToken,
   GetPagesAndSubscribeWebhooks,
   GetShortLiveToken,
@@ -41,6 +42,14 @@ export async function handleFacebookCallback(
       logId
     );
   }
+
+  await LogInformationEvent(
+    req,
+    services,
+    getSchema,
+    `code: ${code}`,
+    "handleFacebookCallback"
+  );
 
   const { ItemsService } = services;
   const schema = await getSchema();
@@ -80,9 +89,18 @@ export async function handleFacebookCallback(
       "handleFacebookCallback"
     );
 
+    await ConfigureWebhook(integrationSettingsData);
+
+     await LogInformationEvent(
+      req,
+      services,
+      getSchema,
+      `Configure webhook successfully`,
+      "handleFacebookCallback"
+    );
+
     const connectedPagesCount = await GetPagesAndSubscribeWebhooks(
       ominiChannelsService,
-      integrationSettingsData,
       userAccessToken
     );
 
@@ -93,15 +111,14 @@ export async function handleFacebookCallback(
       `Connected ${connectedPagesCount} Facebook Page(s) and subscribed to webhooks.`,
       "handleFacebookCallback"
     );
+    
     redirectToFrontend(res, integrationSettingsData.public_directus_url);
   } catch (error: any) {
     const logId = await LogIntegrationEvent(services, req, getSchema, {
       level: "error",
       message: `An unexpected error occurred during Facebook connection:`,
       context: "handleFacebookCallback",
-      stack_trace: `An unexpected error occurred during Facebook connection: ${JSON.stringify(
-        error
-      )}`,
+      stack_trace: JSON.stringify(error),
       user_id: req.accountability ? req.accountability.user : null,
       request_string: "",
       response_string: "",
