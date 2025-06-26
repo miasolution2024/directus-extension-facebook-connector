@@ -6,8 +6,9 @@ import {
 } from "../services/directus.service";
 import {
   ConfigureWebhook,
+  GetAuthenticatedUserPages,
   GetGetLongLiveToken,
-  GetPagesAndSubscribeWebhooks,
+  SubscribePagesWebhook,
   GetShortLiveToken,
 } from "../services/facebook-graph.service";
 
@@ -41,13 +42,15 @@ export async function handleFacebookCallback(
       integrationSettingsData.public_directus_url,
       logId
     );
+    return;
   }
 
   await LogInformationEvent(
     req,
     services,
     getSchema,
-    `code: ${code}`,
+    `Redirect with authenticated code successfully`,
+    code,
     "handleFacebookCallback"
   );
 
@@ -72,7 +75,8 @@ export async function handleFacebookCallback(
       req,
       services,
       getSchema,
-      `Short-lived User Access Token: ${shortLivedUserAccessToken}`,
+      `Short-lived User Access Token successfully`,
+      shortLivedUserAccessToken,
       "handleFacebookCallback"
     );
 
@@ -85,40 +89,56 @@ export async function handleFacebookCallback(
       req,
       services,
       getSchema,
-      `Long-lived User Access Token: ${userAccessToken}`,
+      `Long-lived User Access Token successfully`,
+      userAccessToken,
       "handleFacebookCallback"
     );
 
-    await ConfigureWebhook(integrationSettingsData);
-
-     await LogInformationEvent(
-      req,
-      services,
-      getSchema,
-      `Configure webhook successfully`,
-      "handleFacebookCallback"
-    );
-
-    const connectedPagesCount = await GetPagesAndSubscribeWebhooks(
-      ominiChannelsService,
-      userAccessToken
-    );
+    const response = await ConfigureWebhook(integrationSettingsData);
 
     await LogInformationEvent(
       req,
       services,
       getSchema,
-      `Connected ${connectedPagesCount} Facebook Page(s) and subscribed to webhooks.`,
+      `Configure webhook successfully`,
+      JSON.stringify(response),
       "handleFacebookCallback"
     );
-    
+
+    const pages = await GetAuthenticatedUserPages(userAccessToken);
+
+    await LogInformationEvent(
+      req,
+      services,
+      getSchema,
+      `Get authenticated user pages successfully`,
+      JSON.stringify(pages),
+      "handleFacebookCallback"
+    );
+
+    await SubscribePagesWebhook(
+      req,
+      services,
+      getSchema,
+      ominiChannelsService,
+      pages
+    );
+
     redirectToFrontend(res, integrationSettingsData.public_directus_url);
   } catch (error: any) {
+    
+    const errorMessage =
+      error instanceof Error
+      ? error.stack || error.message
+      : typeof error === "string"
+      ? error
+      : JSON.stringify(error);
+
     const logId = await LogIntegrationEvent(services, req, getSchema, {
       level: "error",
       message: `An unexpected error occurred during Facebook connection:`,
       context: "handleFacebookCallback",
-      stack_trace: JSON.stringify(error),
+      stack_trace: errorMessage,
       user_id: req.accountability ? req.accountability.user : null,
       request_string: "",
       response_string: "",

@@ -28,6 +28,7 @@ export interface OminichannelCreateRequest {
 
 export interface OminichannelUpdateRequest {
   page_name: string;
+  is_enabled: boolean;
   token: string;
 }
 
@@ -96,6 +97,70 @@ export async function GetIntegrationLogsService(
   }
 }
 
+export async function AddOrUpdateOminiChannel(
+  ominiChannelsService: any,
+  page: any,
+  isEnabled: boolean = false
+) {
+  try {
+    const existingPage = await ominiChannelsService.readByQuery({
+      filter: { page_id: { _eq: page.id } },
+      limit: 1,
+    });
+
+    if (existingPage.length > 0) {
+      const directusPageId = existingPage[0].id;
+      await UpdateOminiChannel(
+        directusPageId,
+        ominiChannelsService,
+        page,
+        isEnabled
+      );
+    } else {
+      await AddFacebookNewOminiChannel(ominiChannelsService, page);
+    }
+  } catch (error: any) {
+    throw error;
+  }
+}
+
+export async function UpdateOminiChannel(
+  directusPageId: string,
+  ominiChannelsService: any,
+  page: any,
+  isEnabled: boolean = false
+) {
+  try {
+    const updateOminichannel: OminichannelUpdateRequest = {
+      page_name: page.name,
+      token: page.access_token,
+      is_enabled: isEnabled,
+    };
+    await ominiChannelsService.updateOne(directusPageId, updateOminichannel);
+  } catch (error: any) {
+    throw error;
+  }
+}
+
+export async function AddFacebookNewOminiChannel(
+  ominiChannelsService: any,
+  page: any
+) {
+  try {
+    const newOmichannel: OminichannelCreateRequest = {
+      page_id: page.id,
+      page_name: page.name,
+      token: page.access_token,
+      is_enabled: false,
+      expired_date: page.expires_in,
+      source: OminichannelSource.Facebook,
+    };
+    await ominiChannelsService.createOne(newOmichannel);
+  } catch (error: any) {
+    throw error;
+  }
+}
+
 export async function LogIntegrationEvent(
   services: any,
   req: any,
@@ -123,6 +188,7 @@ export async function LogInformationEvent(
   services: any,
   getSchema: any,
   message: string,
+  stack_trace: string = "",
   context: string = ""
 ): Promise<string> {
   try {
@@ -130,7 +196,7 @@ export async function LogInformationEvent(
       level: "info",
       message,
       context: context,
-      stack_trace: "",
+      stack_trace: stack_trace,
       user_id: req.accountability ? req.accountability.user : null,
       request_string: "",
       response_string: "",

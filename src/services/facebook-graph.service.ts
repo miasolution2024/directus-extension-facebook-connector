@@ -1,8 +1,7 @@
 import {
+  AddOrUpdateOminiChannel,
   AppSettings,
-  OminichannelCreateRequest,
-  OminichannelSource,
-  OminichannelUpdateRequest,
+  LogInformationEvent,
 } from "./directus.service";
 import axiosInstance from "../axios";
 
@@ -59,8 +58,7 @@ export async function GetGetLongLiveToken(
   }
 }
 
-export async function SubscribePageWebhook(
-  ominiChannelsService: any,
+export async function SubscribeFacebookPageWebhook(
   pageId: string,
   pageAccessToken: string
 ): Promise<void> {
@@ -72,17 +70,7 @@ export async function SubscribePageWebhook(
       subscribed_fields: fieldsToSubscribe,
     });
 
-    if (response.data.success) {
-      const existingPage = await ominiChannelsService.readByQuery({
-        filter: { page_id: { _eq: pageId } },
-        limit: 1,
-      });
-      if (existingPage.length > 0) {
-        await ominiChannelsService.updateOne(existingPage[0].id, {
-          is_enabled: true,
-        });
-      }
-    } else {
+    if (!response.data.success) {
       throw new Error(
         `Failed to subscribe webhook for page ${pageId}: ${response.data.error}`
       );
@@ -92,10 +80,9 @@ export async function SubscribePageWebhook(
   }
 }
 
-export async function GetPagesAndSubscribeWebhooks(
-  ominiChannelsService: any,
+export async function GetAuthenticatedUserPages(
   userAccessToken: string
-): Promise<number> {
+): Promise<any[]> {
   try {
     const pagesUrl = `/me/accounts?access_token=${userAccessToken}`;
     const pagesResponse = await axiosInstance.get(pagesUrl);
@@ -103,46 +90,37 @@ export async function GetPagesAndSubscribeWebhooks(
     if (!pages || pages.length === 0) {
       throw new Error("No Facebook Pages found for the user.");
     }
+    return pages;
+  } catch (error: any) {
+    throw error;
+  }
+}
 
-    let connectedPagesCount = 0;
+export async function SubscribePagesWebhook(
+  req: any,
+  services: any,
+  getSchema: any,
+  ominiChannelsService: any,
+  pages: any[]
+) {
+  try {
     for (const page of pages) {
-      try {
-        const existingPage = await ominiChannelsService.readByQuery({
-          filter: { page_id: { _eq: page.id } },
-          limit: 1,
-        });
+      await SubscribeFacebookPageWebhook(page.id, page.access_token);
 
-        if (existingPage.length > 0) {
-          const updateOminichannel: OminichannelUpdateRequest = {
-            page_name: page.name,
-            token: page.access_token,
-          };
-          await ominiChannelsService.updateOne(
-            existingPage[0].id,
-            updateOminichannel
-          );
-        } else {
-          const newOmichannel: OminichannelCreateRequest = {
-            page_id: page.id,
-            page_name: page.name,
-            token: page.access_token,
-            is_enabled: false,
-            expired_date: page.expires_in,
-            source: OminichannelSource.Facebook,
-          };
-          await ominiChannelsService.createOne(newOmichannel);
-        }
-        connectedPagesCount++;
-        await SubscribePageWebhook(
-          ominiChannelsService,
-          page.id,
-          page.access_token
-        );
-      } catch (directusError: any) {
-        throw directusError;
-      }
+      await AddOrUpdateOminiChannel(ominiChannelsService, page, true);
+
+      await LogInformationEvent(
+        req,
+        services,
+        getSchema,
+        `Subscribed to webhook for page ${page.name} (${page.id}) successfully`,
+        JSON.stringify(page),
+        "SubscribePagesWebhook"
+      );
+      throw new Error(
+        `Unknown error occurred while subscribing to page webhook`
+      );
     }
-    return connectedPagesCount;
   } catch (error: any) {
     throw error;
   }
@@ -150,7 +128,7 @@ export async function GetPagesAndSubscribeWebhooks(
 
 export async function ConfigureWebhook(
   integrationSettingsData: AppSettings
-): Promise<void> {
+): Promise<any> {
   try {
     const appAccessToken = await GetAppAccessToken(integrationSettingsData);
     const response = await axiosInstance.post(
@@ -168,6 +146,7 @@ export async function ConfigureWebhook(
         `Error configuring webhook: ${response.data.error.message}`
       );
     }
+    return response.data;
   } catch (error: any) {
     throw error;
   }
