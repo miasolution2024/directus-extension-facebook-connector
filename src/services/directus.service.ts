@@ -1,3 +1,4 @@
+
 export interface AppSettings {
   facebook_app_id: string;
   facebook_app_secret: string;
@@ -17,22 +18,22 @@ export interface IntegrationLog {
   context: string;
 }
 
-export interface OminichannelCreateRequest {
+export interface OmnichannelCreateRequest {
   page_id: string;
   page_name: string;
   token: string;
   is_enabled: boolean;
   expired_date: Date;
-  source: OminichannelSource;
+  source: OmnichannelSource;
 }
 
-export interface OminichannelUpdateRequest {
+export interface OmnichannelUpdateRequest {
   page_name: string;
   is_enabled: boolean;
   token: string;
 }
 
-export enum OminichannelSource {
+export enum OmnichannelSource {
   Facebook = "Facebook",
   Tiktok = "Tiktok",
   Zalo = "Zalo",
@@ -85,77 +86,106 @@ export async function GetIntegrationLogsService(
     const { ItemsService } = services;
     const schema = await getSchema();
 
-    const fbPagesService = new ItemsService("integration_logs", {
+    const integrationLogsService = new ItemsService("integration_logs", {
       schema,
       accountability: req.accountability,
     });
 
-    return fbPagesService;
+    return integrationLogsService;
   } catch (error) {
     console.error("Error loading integration logs:", error);
     throw error;
   }
 }
 
-export async function AddOrUpdateOminiChannel(
-  ominiChannelsService: any,
+export async function GetOmnichannelsService(
+  services: any,
+  req: any,
+  getSchema: any
+): Promise<any> {
+  try {
+    const { ItemsService } = services;
+    const schema = await getSchema();
+
+    const OmnichannelsService = new ItemsService("omni_channels", {
+      schema,
+      accountability: req.accountability,
+    });
+
+    return OmnichannelsService;
+  } catch (error) {
+    console.error("Error loading omini channelss:", error);
+    throw error;
+  }
+}
+
+export async function AddOrUpdateOmnichannel(
+  OmnichannelsService: any,
   page: any,
   isEnabled: boolean = false
 ) {
   try {
-    const existingPage = await ominiChannelsService.readByQuery({
+    console.log(
+      `Adding or updating omini channel for page: ${page.name} (${page.id})`
+    );
+    const existingPage = await OmnichannelsService.readByQuery({
       filter: { page_id: { _eq: page.id } },
+      sort: ["page_id"],
       limit: 1,
     });
 
     if (existingPage.length > 0) {
       const directusPageId = existingPage[0].id;
-      await UpdateOminiChannel(
+      await UpdateOmnichannel(
         directusPageId,
-        ominiChannelsService,
+        OmnichannelsService,
         page,
         isEnabled
       );
     } else {
-      await AddFacebookNewOminiChannel(ominiChannelsService, page);
+      await AddFacebookNewOmnichannel(OmnichannelsService, page);
     }
   } catch (error: any) {
+    console.error(
+      `Error adding or updating omini channel for page ${page.name} (${page.id}):`,
+      error
+    );
     throw error;
   }
 }
 
-export async function UpdateOminiChannel(
+export async function UpdateOmnichannel(
   directusPageId: string,
-  ominiChannelsService: any,
+  OmnichannelsService: any,
   page: any,
   isEnabled: boolean = false
 ) {
   try {
-    const updateOminichannel: OminichannelUpdateRequest = {
+    const updateOmnichannel: OmnichannelUpdateRequest = {
       page_name: page.name,
       token: page.access_token,
       is_enabled: isEnabled,
     };
-    await ominiChannelsService.updateOne(directusPageId, updateOminichannel);
+    await OmnichannelsService.updateOne(directusPageId, updateOmnichannel);
   } catch (error: any) {
     throw error;
   }
 }
 
-export async function AddFacebookNewOminiChannel(
-  ominiChannelsService: any,
+export async function AddFacebookNewOmnichannel(
+  OmnichannelsService: any,
   page: any
 ) {
   try {
-    const newOmichannel: OminichannelCreateRequest = {
+    const newOmichannel: OmnichannelCreateRequest = {
       page_id: page.id,
       page_name: page.name,
       token: page.access_token,
       is_enabled: false,
       expired_date: page.expires_in,
-      source: OminichannelSource.Facebook,
+      source: OmnichannelSource.Facebook,
     };
-    await ominiChannelsService.createOne(newOmichannel);
+    await OmnichannelsService.createOne(newOmichannel);
   } catch (error: any) {
     throw error;
   }

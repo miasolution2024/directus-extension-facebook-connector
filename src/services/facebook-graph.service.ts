@@ -1,6 +1,7 @@
 import {
-  AddOrUpdateOminiChannel,
+  AddOrUpdateOmnichannel,
   AppSettings,
+  GetOmnichannelsService,
   LogInformationEvent,
 } from "./directus.service";
 import axiosInstance from "../axios";
@@ -100,14 +101,15 @@ export async function SubscribePagesWebhook(
   req: any,
   services: any,
   getSchema: any,
-  ominiChannelsService: any,
   pages: any[]
 ) {
+  const OmnichannelsService = await GetOmnichannelsService(services, req, getSchema);
+  
   try {
     for (const page of pages) {
       await SubscribeFacebookPageWebhook(page.id, page.access_token);
 
-      await AddOrUpdateOminiChannel(ominiChannelsService, page, true);
+      await AddOrUpdateOmnichannel(OmnichannelsService, page, true);
 
       await LogInformationEvent(
         req,
@@ -116,9 +118,6 @@ export async function SubscribePagesWebhook(
         `Subscribed to webhook for page ${page.name} (${page.id}) successfully`,
         JSON.stringify(page),
         "SubscribePagesWebhook"
-      );
-      throw new Error(
-        `Unknown error occurred while subscribing to page webhook`
       );
     }
   } catch (error: any) {

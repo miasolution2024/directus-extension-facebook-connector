@@ -1,5 +1,5 @@
 export function redirectToFrontend(res: any, frontendBaseUrl: string): void {
-  const redirectUrl = `${frontendBaseUrl}/admin/content/omini_channels`;
+  const redirectUrl = `${frontendBaseUrl}/admin/content/omni_channels`;
   res.redirect(redirectUrl);
 }
 

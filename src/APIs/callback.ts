@@ -54,13 +54,6 @@ export async function handleFacebookCallback(
     "handleFacebookCallback"
   );
 
-  const { ItemsService } = services;
-  const schema = await getSchema();
-
-  const ominiChannelsService = new ItemsService("omini_channels", {
-    schema,
-    accountability: req.accountability,
-  });
 
   const redirectUri = `${integrationSettingsData.public_directus_url}/directus-extension-facebook-connector/api/facebook/auth/callback`;
 
@@ -120,7 +113,6 @@ export async function handleFacebookCallback(
       req,
       services,
       getSchema,
-      ominiChannelsService,
       pages
     );
 
